@@ -71,7 +71,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # enablement turns Pages on for the repository the first time this
+      # runs, so there is no manual step in Settings.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Package the site
         run: |
           mkdir -p _site/assets
