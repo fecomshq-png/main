@@ -74,13 +74,17 @@ That is the only file you ever need to edit to get running.
 ### 5. Publish the page
 
 Any static host works — it is one HTML file and three assets. The simplest is
-GitHub Pages, which this repository is already set up for: push to the default
-branch and the workflow in `.github/workflows/pages.yml` switches Pages on and
-publishes to `https://<your-username>.github.io/<repo>/`. The Actions run
-prints the exact URL. Send that link to the client.
+GitHub Pages, which this repository is already set up for.
 
-If the deploy step reports *Get Pages site failed*, enable it by hand once
-under **Settings → Pages → Source: GitHub Actions** and re-run the workflow.
+**Turn it on once: Settings → Pages → Source: GitHub Actions.** This has to be
+done by hand — a workflow is not permitted to create a Pages site for its own
+repository, so until you do it the deploy step fails with *Get Pages site
+failed*.
+
+After that, every push to the default branch runs
+`.github/workflows/pages.yml`, which publishes to
+`https://<your-username>.github.io/<repo>/`. The Actions run prints the exact
+URL. Send that link to the client.
 
 Dropbox, Netlify drop, Google Sites or your own web host are all fine too —
 open `index.html` and everything works, because there is no build step.

@@ -71,11 +71,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      # enablement turns Pages on for the repository the first time this
-      # runs, so there is no manual step in Settings.
+      # Pages must already be enabled for the repository (Settings -> Pages
+      # -> Source: GitHub Actions). The action's `enablement: true` option
+      # cannot do it for you here: creating a Pages site needs admin rights
+      # that the workflow token does not have, and it fails with
+      # "Resource not accessible by integration".
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - name: Package the site
         run: |
           mkdir -p _site/assets
