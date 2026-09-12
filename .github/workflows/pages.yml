@@ -1,0 +1,84 @@
+name: Publish questionnaire
+
+# Checks run on every branch. Publishing to GitHub Pages happens only from
+# the repository's default branch, whatever it is named.
+# One-time setup in the repository: Settings -> Pages -> Source: GitHub Actions.
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Front-end files parse
+        run: |
+          for f in assets/config.js assets/questions.js assets/app.js; do
+            node --check "$f"
+          done
+
+      - name: Questionnaire is well formed
+        run: |
+          node -e '
+            const fs = require("fs");
+            const SECTIONS = new Function(
+              fs.readFileSync("assets/questions.js", "utf8") + "; return SECTIONS;"
+            )();
+            const qs = SECTIONS.flatMap(s => s.qs);
+            const ids = qs.map(q => q.id);
+            const dupes = [...new Set(ids.filter((v, i) => ids.indexOf(v) !== i))];
+            if (dupes.length) throw new Error("duplicate question ids: " + dupes.join(", "));
+            const types = ["text", "num", "long", "radio", "check", "grid"];
+            for (const q of qs) {
+              if (!types.includes(q.type)) throw new Error(q.id + ": unknown type " + q.type);
+              if (["radio", "check"].includes(q.type) && !(q.opts || []).length)
+                throw new Error(q.id + ": " + q.type + " needs opts");
+              if (q.type === "grid") {
+                if (!(q.rows || []).length) throw new Error(q.id + ": grid needs rows");
+                if (q.grid !== "pct" && !(q.cols || []).length)
+                  throw new Error(q.id + ": matrix grid needs cols");
+              }
+            }
+            console.log(SECTIONS.length + " sections, " + qs.length + " questions, " +
+                        qs.filter(q => q.req).length + " required");
+          '
+
+      - name: Warn if the endpoint is unconfigured
+        run: |
+          if grep -q "PASTE_YOUR_WEB_APP_URL_HERE" assets/config.js; then
+            echo "::warning file=assets/config.js::API_URL is still the placeholder — the published form will not save answers. See README step 4."
+          fi
+
+  deploy:
+    needs: check
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Package the site
+        run: |
+          mkdir -p _site/assets
+          cp index.html _site/
+          cp assets/*.css assets/*.js _site/assets/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
